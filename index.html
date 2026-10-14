@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+<title>ECCA Calculator</title>
+<style>
+  :root{
+    --bg:#F2F2F7; --card:#FFFFFF; --text:#1C1C1E; --sub:#6E6E73;
+    --accent:#0A7EA4; --accent-soft:rgba(10,126,164,.12);
+    --ok:#2E7D32; --ok-soft:rgba(46,125,50,.12);
+    --fail:#C62828; --fail-soft:rgba(198,40,40,.10);
+    --line:#E5E5EA; --chip:#E9E9EE;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#000000; --card:#1C1C1E; --text:#F2F2F7; --sub:#98989F;
+      --accent:#4DA8DA; --accent-soft:rgba(77,168,218,.18);
+      --ok:#66BB6A; --ok-soft:rgba(102,187,106,.18);
+      --fail:#EF5350; --fail-soft:rgba(239,83,80,.16);
+      --line:#2C2C2E; --chip:#2C2C2E;
+    }
+  }
+  *{ box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+  html{ font-size:17px; overflow-x:hidden; overflow-x:clip; }
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,sans-serif;
+    background:var(--bg); color:var(--text);
+    padding:0 0 calc(96px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden; overflow-x:clip; overscroll-behavior-x:contain;
+  }
+  .topbar{
+    position:sticky; top:0; z-index:20; background:var(--bg);
+    padding:calc(12px + env(safe-area-inset-top)) 16px 10px;
+    border-bottom:1px solid var(--line);
+  }
+  .topbar .title{ font-size:20px; font-weight:700; letter-spacing:.3px; }
+  .topbar .subtitle{ font-size:13px; color:var(--sub); margin-top:2px; }
+  .segmented{
+    display:grid; grid-template-columns:1fr 1fr 1fr; gap:2px;
+    background:var(--chip); border-radius:10px; padding:2px; margin-top:10px;
+  }
+  .segmented.tabs{ grid-template-columns:1fr 1fr; max-width:260px; margin:12px auto 0; }
+  .segmented button{
+    border:0; background:transparent; color:var(--text);
+    font:inherit; font-size:15px; font-weight:600; padding:9px 0;
+    border-radius:8px; cursor:pointer;
+  }
+  .segmented button.active{ background:var(--accent); color:#fff; }
+  main{ padding:12px 16px 0; max-width:640px; margin:0 auto; }
+  .card{
+    background:var(--card); border-radius:14px; padding:16px;
+    margin-bottom:12px; box-shadow:0 1px 3px rgba(0,0,0,.06);
+  }
+  .card-head{ display:flex; align-items:baseline; justify-content:space-between; gap:8px; margin-bottom:12px; }
+  .card-head h2{ font-size:16px; font-weight:700; }
+  .card-head .max{ font-size:12px; color:var(--sub); font-weight:500; }
+  .chip{
+    font-size:14px; font-weight:700; font-variant-numeric:tabular-nums;
+    background:var(--chip); color:var(--text); border-radius:8px; padding:4px 10px;
+    white-space:nowrap;
+  }
+  .chip.full{ background:var(--accent-soft); color:var(--accent); }
+  .prompt{ font-size:14px; color:var(--sub); font-style:italic; margin-bottom:12px; line-height:1.45; }
+  .tiles{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .tile{
+    border:1.5px solid var(--line); border-radius:10px; background:transparent;
+    color:var(--text); font:inherit; font-size:15px; font-weight:600;
+    padding:14px 8px; text-align:center; cursor:pointer; min-height:44px;
+  }
+  .tile.on{ border-color:var(--accent); background:var(--accent-soft); color:var(--accent); }
+  .qrow{ padding:10px 0; border-top:1px solid var(--line); }
+  .qrow:first-of-type{ border-top:0; padding-top:0; }
+  .qtext{ font-size:15px; line-height:1.4; margin-bottom:8px; }
+  .qhint{ font-size:12px; color:var(--sub); margin-bottom:8px; }
+  .seg{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .seg button{
+    border:1.5px solid var(--line); border-radius:10px; background:transparent;
+    color:var(--text); font:inherit; font-size:15px; font-weight:600;
+    padding:12px 0; cursor:pointer; min-height:44px;
+  }
+  .seg button.yes.on{ border-color:var(--fail); background:var(--fail-soft); color:var(--fail); }
+  .seg button.no.on{ border-color:var(--ok); background:var(--ok-soft); color:var(--ok); }
+  .seg button.pass.on{ border-color:var(--ok); background:var(--ok-soft); color:var(--ok); }
+  .seg button.fail.on{ border-color:var(--fail); background:var(--fail-soft); color:var(--fail); }
+  .words{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px; }
+  .word{
+    text-align:center; font-size:28px; font-weight:700; padding:14px 4px;
+    background:var(--accent-soft); color:var(--accent); border-radius:10px;
+  }
+  .seq{ display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 12px; }
+  .seq span{
+    font-size:15px; font-weight:700; font-variant-numeric:tabular-nums;
+    background:var(--chip); border-radius:8px; padding:6px 10px;
+  }
+  .months{ font-size:22px; font-weight:700; letter-spacing:2px; text-align:center;
+    background:var(--chip); border-radius:10px; padding:12px; margin-bottom:12px; word-break:break-all; }
+  .subtest{ padding:12px 0; border-top:1px solid var(--line); }
+  .subtest:first-of-type{ border-top:0; padding-top:0; }
+  .subtest .label{ font-size:15px; font-weight:600; margin-bottom:2px; }
+  .subtest .note{ font-size:12px; color:var(--sub); margin-bottom:8px; }
+  .ab-item{ padding:12px 0; border-top:1px solid var(--line); }
+  .ab-item:first-of-type{ border-top:0; padding-top:0; }
+  .ab-item .qtext{ margin-bottom:8px; }
+  .ab-fields{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+  .ab-fields label{ display:block; font-size:11px; font-weight:700; color:var(--sub); text-transform:uppercase; letter-spacing:.5px; margin-bottom:4px; }
+  input[type=text]{
+    width:100%; font:inherit; font-size:15px; color:var(--text);
+    background:var(--bg); border:1.5px solid var(--line); border-radius:10px;
+    padding:11px 10px; min-height:44px; outline:none;
+  }
+  input[type=text]:focus{ border-color:var(--accent); }
+
+  .bottombar{
+    position:fixed; left:0; right:0; bottom:0; z-index:30;
+    background:var(--card); border-top:1px solid var(--line);
+    padding:12px 16px calc(12px + env(safe-area-inset-bottom));
+    display:flex; align-items:center; gap:10px;
+  }
+  .total{ font-size:22px; font-weight:800; font-variant-numeric:tabular-nums; min-width:96px; }
+  .total small{ font-size:13px; font-weight:600; color:var(--sub); }
+  .btn{
+    border:0; border-radius:12px; font:inherit; font-size:16px; font-weight:700;
+    padding:13px 16px; cursor:pointer; min-height:46px;
+    transition:background .2s, transform .15s;
+  }
+  .btn.primary{ flex:1; background:var(--accent); color:#fff; }
+  .btn.primary.copied{ background:var(--ok); }
+  .btn.copied{ transform:scale(.97); }
+  .btn.ghost{ background:var(--chip); color:var(--text); }
+  .legal{ font-size:11px; color:var(--sub); line-height:1.5; text-align:center; padding:8px 16px 20px; max-width:640px; margin:0 auto; }
+  .modal-veil{
+    position:fixed; inset:0; z-index:40; background:rgba(0,0,0,.4);
+    display:none; align-items:center; justify-content:center; padding:24px;
+  }
+  .modal-veil.open{ display:flex; }
+  .modal{
+    background:var(--card); border-radius:14px; padding:20px; max-width:340px; width:100%;
+  }
+  .modal h3{ font-size:17px; margin-bottom:8px; }
+  .modal p{ font-size:14px; color:var(--sub); line-height:1.45; margin-bottom:16px; }
+  .modal .seg{ grid-template-columns:1fr 1fr; }
+  .toast{
+    position:fixed; left:50%; bottom:calc(110px + env(safe-area-inset-bottom));
+    transform:translateX(-50%); z-index:50;
+    background:var(--text); color:var(--bg); font-size:14px; font-weight:600;
+    border-radius:10px; padding:10px 16px; opacity:0; pointer-events:none;
+    transition:opacity .25s; white-space:nowrap;
+  }
+  .toast.show{ opacity:1; }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="title">ECCA</div>
+  <div class="subtitle">Electroconvulsive Therapy Cognitive Assessment &middot; bedside calculator</div>
+</header>
+
+<main>
+
+  <div class="segmented tabs" id="tabSeg">
+    <button data-tab="test" class="active">Test</button>
+    <button data-tab="informant">Informant</button>
+  </div>
+  <div class="segmented" id="phaseSeg">
+    <button data-phase="pre" class="active">Pre-ECT</button>
+    <button data-phase="mid">Mid-ECT</button>
+    <button data-phase="post">Post-ECT</button>
+  </div>
+
+  <div id="tabTest">
+
+  <section class="card">
+    <div class="card-head"><h2>1. Orientation <span class="max">/ 4</span></h2><span class="chip" id="chip-orientation">0 / 4</span></div>
+    <p class="prompt">&ldquo;Tell me today&rsquo;s date.&rdquo; (clarify: &ldquo;Tell me the month and the year.&rdquo;) &middot; &ldquo;Tell me the name of this building or place that we are in.&rdquo;</p>
+    <div class="tiles">
+      <button class="tile" data-sec="orientation" data-key="year">Year</button>
+      <button class="tile" data-sec="orientation" data-key="month">Month</button>
+      <button class="tile" data-sec="orientation" data-key="date">Date</button>
+      <button class="tile" data-sec="orientation" data-key="place">Place</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>2. Subjective Memory <span class="max">/ 4</span></h2><span class="chip" id="chip-subjective">0 / 4</span></div>
+    <p class="prompt">&ldquo;I am going to ask you about how you feel your memory is right now. Please answer yes or no.&rdquo; &middot; 1 point per No.</p>
+    <div id="subjective"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>3. Informant Assessment <span class="max">/ 4</span></h2><span class="chip" id="chip-informant">0 / 4</span></div>
+    <p class="prompt">To informant: &ldquo;I am going to ask your opinion about the patient&rsquo;s memory. Please answer yes or no to the best of your knowledge.&rdquo; &middot; 1 point per No.</p>
+    <div id="informant"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>4. Registration <span class="max">/ 0</span></h2></div>
+    <p class="prompt">&ldquo;I am going to read a list of four words. Repeat them after me and try to memorize them. I will ask you about them at the end of the test.&rdquo;</p>
+    <div class="words" id="regWords"></div>
+    <button class="tile" id="regTwice" style="width:100%">Read list twice &#10003;</button>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>5. Attention <span class="max">/ 3</span></h2><span class="chip" id="chip-attention">0 / 3</span></div>
+    <div class="subtest">
+      <div class="label">Serial 7s &mdash; start at <span id="s7Start"></span></div>
+      <div class="note">Target sequence (5 subtractions)</div>
+      <div class="seq" id="s7Seq"></div>
+      <div class="seg">
+        <button class="pass" data-sec="attention" data-key="s7" data-val="1">Pass</button>
+        <button class="fail" data-sec="attention" data-key="s7" data-val="0">Fail</button>
+      </div>
+    </div>
+    <div class="subtest">
+      <div class="label">Trail B &mdash; <span id="trailRange"></span></div>
+      <div class="note">Alternate numbers and letters. Any mistake disqualifies the point.</div>
+      <div class="seg">
+        <button class="pass" data-sec="attention" data-key="trail" data-val="1">Pass</button>
+        <button class="fail" data-sec="attention" data-key="trail" data-val="0">Fail</button>
+      </div>
+    </div>
+    <div class="subtest">
+      <div class="label">Months Backwards &mdash; December to January</div>
+      <div class="note">Target pattern</div>
+      <div class="months" id="monthsPattern"></div>
+      <div class="seg">
+        <button class="pass" data-sec="attention" data-key="months" data-val="1">Pass</button>
+        <button class="fail" data-sec="attention" data-key="months" data-val="0">Fail</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>6. Autobiographical Memory <span class="max">/ 6</span></h2><span class="chip" id="chip-autobio">0 / 6</span></div>
+    <p class="prompt">Ask each item; judge against what the informant reported. 1 point per corroborated response.</p>
+    <div id="autobio"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>7. Fund of Knowledge <span class="max">/ 5</span></h2><span class="chip" id="chip-fund">0 / 5</span></div>
+    <p class="prompt">&ldquo;I am going to ask general knowledge questions. Please answer to the best of your knowledge.&rdquo;</p>
+    <div id="fund"></div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>8. Delayed Recall <span class="max">/ 4</span></h2><span class="chip" id="chip-recall">0 / 4</span></div>
+    <p class="prompt">&ldquo;I gave you four words earlier. Could you please tell me the four words?&rdquo; &middot; Tap each word recalled.</p>
+    <div class="tiles" id="recallTiles"></div>
+  </section>
+
+  <p class="legal">
+    COPYRIGHT 2014, EMORY UNIVERSITY BRAIN HEALTH CENTER<br>
+    Hermida D, et al. J Affect Disord. 2020;269:36-42 &middot; fuquacenter.org/ecca<br>
+    Screening/monitoring tool only &mdash; not a diagnostic neuropsychological assessment.
+    Stores no patient data. Personal clinical use; obtain Fuqua Center permission before distribution.
+  </p>
+  </div>
+
+  <div id="tabInformant" style="display:none">
+    <section class="card">
+      <div class="card-head"><h2>Informant Sheet</h2></div>
+      <p class="prompt">&ldquo;Your family member is having a brief memory test. In order to check his/her answers we would appreciate if you answer the following few questions to the best of your knowledge.&rdquo;</p>
+      <div class="ab-fields" style="grid-template-columns:1fr 1fr; margin-bottom:12px">
+        <div><label>Your name</label><input type="text" data-sec="infmeta" data-key="you" autocomplete="off" autocorrect="off" spellcheck="false"></div>
+        <div><label>Date</label><input type="text" data-sec="infmeta" data-key="date" autocomplete="off" autocorrect="off" spellcheck="false"></div>
+        <div><label>Patient</label><input type="text" data-sec="infmeta" data-key="patient" autocomplete="off" autocorrect="off" spellcheck="false"></div>
+        <div><label>Relationship</label><input type="text" data-sec="infmeta" data-key="rel" autocomplete="off" autocorrect="off" spellcheck="false"></div>
+      </div>
+      <div id="infYn"></div>
+      <div id="infFacts" style="margin-top:12px"></div>
+      <button class="btn primary" id="copyInf" style="width:100%; margin-top:12px">Copy Sheet for Chart</button>
+    </section>
+    <p class="legal">
+      COPYRIGHT 2014, EMORY UNIVERSITY BRAIN HEALTH CENTER<br>
+      Hermida D, et al. J Affect Disord. 2020;269:36-42 &middot; fuquacenter.org/ecca
+    </p>
+  </div>
+</main>
+
+<footer class="bottombar" id="bottomBar">
+  <div class="total"><span id="totalScore">0</span> <small>/ 30</small></div>
+  <button class="btn primary" id="copyBtn">Copy for Chart</button>
+  <button class="btn ghost" id="resetBtn">Reset</button>
+</footer>
+
+<div class="modal-veil" id="veil">
+  <div class="modal">
+    <h3 id="modalTitle"></h3>
+    <p id="modalBody"></p>
+    <div class="seg">
+      <button class="fail" id="modalCancel">Cancel</button>
+      <button class="pass" id="modalOk">Confirm</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+var $ = function(s){ return document.querySelector(s); };
+
+var PHASES = {
+  pre:  { label:"Pre-ECT",  words:["Home","Army","Picture","Green"],  s7Start:100, s7:[93,86,79,72,65], trail:"1A \u2192 10J",  months:"DNOSAJJMAMFJ" },
+  mid:  { label:"Mid-ECT",  words:["House","Queen","Corner","Red"],   s7Start:90,  s7:[83,76,69,62,55], trail:"5E \u2192 14N",  months:"SAJJMAMFJDNO" },
+  post: { label:"Post-ECT", words:["Dress","Blue","Engine","King"],   s7Start:80,  s7:[73,66,59,52,45], trail:"10J \u2192 19S", months:"JJMAMFJDNOSA" }
+};
+
+var SUBJ_Q = [
+  "Are you having difficulty with your memory?",
+  "Are you feeling confused now?",
+  "Are you having difficulty paying attention to things that go on around you?",
+  "Are you having difficulty remembering movies/TV shows that you have recently seen?"
+];
+var INFO_Q = [
+  "Is the patient having difficulty with his/her memory?",
+  "Is the patient having difficulty following a conversation?",
+  "Is the patient having difficulty remembering events that happened more than a year ago?",
+  "Is the patient having difficulty remembering events that happened during the past week?"
+];
+var AB_Q = [
+  "Where did the patient go on his/her last overnight trip?",
+  "What did the patient do last New Year's Eve?",
+  "What did the patient do on his/her last birthday?",
+  "What did the patient have for dinner last night?",
+  "What was the last restaurant the patient visited?",
+  "What psychiatric medications is the patient taking?"
+];
+var FUND_Q = [
+  { q:"What are the colors of the flag?", a:"Red, white, blue" },
+  { q:"Who was the previous president / prime minister?", a:"Clinician to verify" },
+  { q:"What is the capital of your state/province?", a:"Patient's state/province capital" },
+  { q:"How many days are in a year?", a:"365" },
+  { q:"How many states/provinces are in your country?", a:"50 (US)" }
+];
+
+var INF_FACTS = [
+  { q:"Where did she/he go on her/his last overnight trip?", when:true },
+  { q:"What did she/he do last New Year's Eve?" },
+  { q:"What did she/he do on her/his last birthday?" },
+  { q:"What did she/he have for dinner last night?" },
+  { q:"What was the last restaurant he/she last visited?", when:true },
+  { q:"What psychiatric medications is he/she taking?" }
+];
+
+function freshState(phase){
+  return {
+    phase: phase,
+    inf: { you:"", date:"", patient:"", rel:"", yn:[null,null,null,null],
+           facts: INF_FACTS.map(function(){ return { a:"", when:"" }; }) },
+    orientation: { year:false, month:false, date:false, place:false },
+    subjective: [null,null,null,null],
+    informant: [null,null,null,null],
+    regTwice: false,
+    attention: { s7:null, trail:null, months:null },
+    autobio: [null,null,null,null,null,null],
+    fund: [null,null,null,null,null],
+    recall: [null,null,null,null]
+  };
+}
+var state = freshState("pre");
+
+function ynRow(container, questions, sec){
+  var html = "";
+  questions.forEach(function(q, i){
+    html += '<div class="qrow"><div class="qtext">' + (i+1) + '. ' + q + '</div>' +
+      '<div class="seg">' +
+      '<button class="yes" data-sec="' + sec + '" data-idx="' + i + '" data-val="yes">Yes</button>' +
+      '<button class="no" data-sec="' + sec + '" data-idx="' + i + '" data-val="no">No</button>' +
+      '</div></div>';
+  });
+  container.innerHTML = html;
+}
+ynRow($("#subjective"), SUBJ_Q, "subjective");
+ynRow($("#informant"), INFO_Q, "informant");
+
+(function buildAutobio(){
+  var c = $("#autobio"), html = "";
+  AB_Q.forEach(function(q, i){
+    html += '<div class="ab-item"><div class="qtext">' + (i+1) + '. ' + q + '</div>' +
+      '<div class="seg">' +
+      '<button class="pass" data-sec="autobio" data-idx="' + i + '" data-val="1">Corroborated</button>' +
+      '<button class="fail" data-sec="autobio" data-idx="' + i + '" data-val="0">Not corroborated</button>' +
+      '</div></div>';
+  });
+  c.innerHTML = html;
+})();
+
+(function buildInf(){
+  var yn = $("#infYn"), html = "";
+  INFO_Q.forEach(function(q, i){
+    html += '<div class="qrow"><div class="qtext">' + (i+1) + '. ' + q + '</div>' +
+      '<div class="seg">' +
+      '<button class="yes" data-sec="infyn" data-idx="' + i + '" data-val="Yes">Yes</button>' +
+      '<button class="no" data-sec="infyn" data-idx="' + i + '" data-val="No">No</button>' +
+      '</div></div>';
+  });
+  yn.innerHTML = html;
+  var f = $("#infFacts"), html2 = "";
+  INF_FACTS.forEach(function(item, i){
+    html2 += '<div class="ab-item"><div class="qtext">' + (i+1) + '. ' + item.q + '</div>' +
+      '<div class="ab-fields" style="grid-template-columns:' + (item.when ? "1fr 1fr" : "1fr") + '">' +
+      '<div><label>Answer</label><input type="text" data-sec="infact" data-idx="' + i + '" data-field="a" autocomplete="off" autocorrect="off" spellcheck="false"></div>' +
+      (item.when ? '<div><label>When</label><input type="text" data-sec="infact" data-idx="' + i + '" data-field="when" autocomplete="off" autocorrect="off" spellcheck="false"></div>' : '') +
+      '</div></div>';
+  });
+  f.innerHTML = html2;
+})();
+
+(function buildFund(){
+  var c = $("#fund"), html = "";
+  FUND_Q.forEach(function(f, i){
+    html += '<div class="qrow"><div class="qtext">' + (i+1) + '. ' + f.q + '</div>' +
+      '<div class="qhint">Answer: ' + f.a + '</div>' +
+      '<div class="seg">' +
+      '<button class="pass" data-sec="fund" data-idx="' + i + '" data-val="1">Correct</button>' +
+      '<button class="fail" data-sec="fund" data-idx="' + i + '" data-val="0">Incorrect</button>' +
+      '</div></div>';
+  });
+  c.innerHTML = html;
+})();
+
+function scores(){
+  var o = 0;
+  Object.keys(state.orientation).forEach(function(k){ if (state.orientation[k]) o++; });
+  var s = state.subjective.filter(function(v){ return v === "no"; }).length;
+  var i = state.informant.filter(function(v){ return v === "no"; }).length;
+  var a = 0;
+  Object.keys(state.attention).forEach(function(k){ if (state.attention[k] === true) a++; });
+  var ab = state.autobio.filter(function(v){ return v === true; }).length;
+  var f = state.fund.filter(function(v){ return v === true; }).length;
+  var r = state.recall.filter(function(v){ return v === true; }).length;
+  return { o:o, s:s, i:i, a:a, ab:ab, f:f, r:r, total:o+s+i+a+ab+f+r };
+}
+
+function render(){
+  var p = PHASES[state.phase];
+  document.querySelectorAll('#tabInformant input[data-sec="infmeta"]').forEach(function(inp){
+    inp.value = state.inf[inp.dataset.key];
+  });
+  document.querySelectorAll('#tabInformant input[data-sec="infact"]').forEach(function(inp){
+    inp.value = state.inf.facts[+inp.dataset.idx][inp.dataset.field];
+  });
+  document.querySelectorAll('button[data-sec="infyn"]').forEach(function(b){
+    b.classList.toggle("on", state.inf.yn[+b.dataset.idx] === b.dataset.val);
+  });
+  document.querySelectorAll("#phaseSeg button").forEach(function(b){
+    b.classList.toggle("active", b.dataset.phase === state.phase);
+  });
+  document.querySelectorAll('[data-sec="orientation"]').forEach(function(b){
+    b.classList.toggle("on", !!state.orientation[b.dataset.key]);
+  });
+  document.querySelectorAll('button[data-sec="subjective"], button[data-sec="informant"]').forEach(function(b){
+    b.classList.toggle("on", state[b.dataset.sec][+b.dataset.idx] === b.dataset.val);
+  });
+  $("#regTwice").classList.toggle("on", state.regTwice);
+  $("#regWords").innerHTML = p.words.map(function(w){ return '<div class="word">' + w + '</div>'; }).join("");
+  $("#s7Start").textContent = p.s7Start;
+  $("#s7Seq").innerHTML = p.s7.map(function(n){ return '<span>' + n + '</span>'; }).join("");
+  $("#trailRange").textContent = p.trail;
+  $("#monthsPattern").textContent = p.months;
+  document.querySelectorAll('button[data-sec="attention"]').forEach(function(b){
+    b.classList.toggle("on", state.attention[b.dataset.key] === (b.dataset.val === "1"));
+  });
+  document.querySelectorAll('button[data-sec="autobio"]').forEach(function(b){
+    b.classList.toggle("on", state.autobio[+b.dataset.idx] === (b.dataset.val === "1"));
+  });
+  document.querySelectorAll('button[data-sec="fund"]').forEach(function(b){
+    b.classList.toggle("on", state.fund[+b.dataset.idx] === (b.dataset.val === "1"));
+  });
+  $("#recallTiles").innerHTML = p.words.map(function(w, i){
+    return '<button class="tile' + (state.recall[i] ? " on" : "") + '" data-sec="recall" data-idx="' + i + '">' + w + (state.recall[i] ? " \u2713" : "") + '</button>';
+  }).join("");
+
+  var sc = scores();
+  setChip("chip-orientation", sc.o, 4);
+  setChip("chip-subjective", sc.s, 4);
+  setChip("chip-informant", sc.i, 4);
+  setChip("chip-attention", sc.a, 3);
+  setChip("chip-autobio", sc.ab, 6);
+  setChip("chip-fund", sc.f, 5);
+  setChip("chip-recall", sc.r, 4);
+  $("#totalScore").textContent = sc.total;
+}
+function setChip(id, v, max){
+  var el = document.getElementById(id);
+  el.textContent = v + " / " + max;
+  el.classList.toggle("full", v === max);
+}
+
+document.addEventListener("click", function(e){
+  var b = e.target.closest("button");
+  if (!b) return;
+  var sec = b.dataset.sec;
+  if (!sec) return;
+  if (sec === "orientation"){
+    var k = b.dataset.key;
+    state.orientation[k] = !state.orientation[k];
+  } else if (sec === "subjective" || sec === "informant"){
+    var cur = state[sec][+b.dataset.idx];
+    state[sec][+b.dataset.idx] = (cur === b.dataset.val) ? null : b.dataset.val;
+  } else if (sec === "attention"){
+    var v = b.dataset.val === "1";
+    state.attention[b.dataset.key] = (state.attention[b.dataset.key] === v) ? null : v;
+  } else if (sec === "autobio"){
+    var m = b.dataset.val === "1";
+    state.autobio[+b.dataset.idx] = (state.autobio[+b.dataset.idx] === m) ? null : m;
+  } else if (sec === "infyn"){
+    state.inf.yn[+b.dataset.idx] = (state.inf.yn[+b.dataset.idx] === b.dataset.val) ? null : b.dataset.val;
+  } else if (sec === "fund"){
+    var fv = b.dataset.val === "1";
+    state.fund[+b.dataset.idx] = (state.fund[+b.dataset.idx] === fv) ? null : fv;
+  } else if (sec === "recall"){
+    state.recall[+b.dataset.idx] = !state.recall[+b.dataset.idx];
+  }
+  render();
+});
+
+$("#regTwice").addEventListener("click", function(){ state.regTwice = !state.regTwice; render(); });
+
+document.addEventListener("input", function(e){
+  var el = e.target;
+  if (el.dataset.sec === "infmeta"){
+    state.inf[el.dataset.key] = el.value;
+  } else if (el.dataset.sec === "infact"){
+    state.inf.facts[+el.dataset.idx][el.dataset.field] = el.value;
+  }
+});
+
+document.querySelectorAll("#phaseSeg button").forEach(function(b){
+  b.addEventListener("click", function(){
+    var phase = b.dataset.phase;
+    if (phase === state.phase) return;
+    confirmDialog("Change phase?", "Phase-specific items (word list, attention sequences, recall) will reset. Subjective, informant, autobiographical, and fund-of-knowledge entries are kept.", function(){
+      var keep = state;
+      state = freshState(phase);
+      state.inf = keep.inf;
+      state.orientation = keep.orientation;
+      state.subjective = keep.subjective;
+      state.informant = keep.informant;
+      state.autobio = keep.autobio;
+      state.fund = keep.fund;
+      render();
+    });
+  });
+});
+
+$("#resetBtn").addEventListener("click", function(){
+  confirmDialog("Reset assessment?", "All entered values will be cleared. Nothing is stored by this app.", function(){
+    var keepInf = state.inf;
+    state = freshState(state.phase);
+    state.inf = keepInf;
+    render();
+    toast("Assessment reset");
+  });
+});
+
+function chartText(){
+  var sc = scores();
+  var date = new Date().toLocaleDateString("en-US", { year:"numeric", month:"short", day:"numeric" });
+  return [
+    "ECCA Assessment Summary",
+    "Phase: " + PHASES[state.phase].label,
+    "Date: " + date,
+    "-----------------------------------",
+    "Orientation: " + sc.o + " / 4",
+    "Subjective Memory: " + sc.s + " / 4",
+    "Informant: " + sc.i + " / 4",
+    "Attention: " + sc.a + " / 3",
+    "Autobiographical Memory: " + sc.ab + " / 6",
+    "Fund of Knowledge: " + sc.f + " / 5",
+    "Delayed Recall: " + sc.r + " / 4",
+    "-----------------------------------",
+    "TOTAL SCORE: " + sc.total + " / 30",
+    "",
+    "COPYRIGHT 2014, EMORY UNIVERSITY BRAIN HEALTH CENTER"
+  ].join("\n");
+}
+
+function copyText(text, btn){
+  function done(){
+    toast("Copied to clipboard");
+    if (btn){
+      if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+      btn.textContent = "Copied \u2713";
+      btn.classList.add("copied");
+      setTimeout(function(){ btn.textContent = btn.dataset.label; btn.classList.remove("copied"); }, 1500);
+    }
+  }
+  if (navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(text).then(done, function(){ fallbackCopy(text); done(); });
+  } else {
+    fallbackCopy(text);
+    done();
+  }
+}
+
+$("#copyBtn").addEventListener("click", function(){
+  copyText(chartText(), this);
+});
+
+function infSheetText(){
+  var inf = state.inf, lines = [];
+  lines.push("ECCA Informant Sheet");
+  lines.push("Date: " + inf.date);
+  lines.push("Informant: " + inf.you + (inf.rel ? " (" + inf.rel + ")" : ""));
+  lines.push("Patient: " + inf.patient);
+  lines.push("-----------------------------------");
+  INFO_Q.forEach(function(q, i){ lines.push((i+1) + ". " + q + " " + (inf.yn[i] || "—")); });
+  lines.push("-----------------------------------");
+  INF_FACTS.forEach(function(f, i){
+    var l = (i+1) + ". " + f.q + " " + (inf.facts[i].a || "—");
+    if (f.when && inf.facts[i].when) l += " (when: " + inf.facts[i].when + ")";
+    lines.push(l);
+  });
+  lines.push("-----------------------------------");
+  lines.push("COPYRIGHT 2014, EMORY UNIVERSITY BRAIN HEALTH CENTER");
+  return lines.join("\n");
+}
+
+$("#copyInf").addEventListener("click", function(){
+  copyText(infSheetText(), this);
+});
+
+document.querySelectorAll("#tabSeg button").forEach(function(b){
+  b.addEventListener("click", function(){
+    var tab = b.dataset.tab;
+    document.querySelectorAll("#tabSeg button").forEach(function(x){
+      x.classList.toggle("active", x.dataset.tab === tab);
+    });
+    $("#tabTest").style.display = tab === "test" ? "" : "none";
+    $("#tabInformant").style.display = tab === "informant" ? "" : "none";
+    $("#phaseSeg").style.display = tab === "test" ? "" : "none";
+    $("#bottomBar").style.display = tab === "test" ? "" : "none";
+  });
+});
+function fallbackCopy(text){
+  var ta = document.createElement("textarea");
+  ta.value = text;
+  ta.style.position = "fixed"; ta.style.opacity = "0";
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand("copy"); } catch(e){}
+  document.body.removeChild(ta);
+}
+
+var toastTimer = null;
+function toast(msg){
+  var t = $("#toast");
+  t.textContent = msg;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){ t.classList.remove("show"); }, 1800);
+}
+
+function confirmDialog(title, body, onOk){
+  $("#modalTitle").textContent = title;
+  $("#modalBody").textContent = body;
+  $("#veil").classList.add("open");
+  $("#modalOk").onclick = function(){ $("#veil").classList.remove("open"); onOk(); };
+  $("#modalCancel").onclick = function(){ $("#veil").classList.remove("open"); };
+}
+
+render();
+</script>
+</body>
+</html>
